@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Evento } from '../../models/evento.model';
 import { EventoService } from '../../services/evento.service';
 import { UserService } from '../../services/user.service';
+import { Evento } from '../../models/evento.model';
 import { User } from '../../models/user.model';
 import { Location } from '@angular/common';
 
@@ -25,11 +25,7 @@ export class EventoComponent implements OnInit {
   errorMessage = '';
   showDeleteModal = false;
   private pendingDeleteIndex: number | null = null;
-
-  availablePage = 1;
-  availablePageSize = 5;
-  selectedPage = 1;
-  selectedPageSize = 5;
+  editingEventId: string | null = null;
 
   constructor(
     private eventoService: EventoService,
@@ -38,28 +34,45 @@ export class EventoComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadUsers();
+    this.loadEventos();
+  }
+
+  /** 🔹 Carga de usuarios */
+  loadUsers(): void {
     this.userService.getUsers().subscribe({
       next: (users) => {
         this.users = users as any;
         this.availableUsers = [...this.users];
-        this.clampPages();
       }
     });
+  }
+
+  /** 🔹 Carga de eventos */
+  loadEventos(): void {
     this.eventoService.getEventos().subscribe({
       next: (evts) => {
         this.eventos = evts.map(e => ({
           ...e,
-          schedule: Array.isArray(e.schedule) ? e.schedule : (e.schedule ? [e.schedule as any] : []),
-          participantes: Array.isArray((e as any).participantes) ? (e as any).participantes : ((e as any).participants || [])
+          schedule: Array.isArray(e.schedule)
+            ? e.schedule
+            : e.schedule
+            ? [e.schedule]
+            : [],
+          participantes: Array.isArray(e.participantes)
+            ? e.participantes
+            : []
         }));
       }
     });
   }
 
+  /** 🔹 Ir atrás */
   goHome(): void {
     this.location.back();
   }
 
+  /** 🔹 Crear horario */
   setSchedule(): void {
     this.errorMessage = '';
     if (!this.dateStr || !this.timeStr) {
@@ -76,14 +89,15 @@ export class EventoComponent implements OnInit {
     this.timeStr = '';
   }
 
+  /** 🔹 Añadir participante */
   addParticipant(u: User): void {
     if (!u?._id) return;
     this.availableUsers = this.availableUsers.filter(x => x._id !== u._id);
     if (!this.selectedUsers.find(x => x._id === u._id)) this.selectedUsers.push(u);
     this.syncParticipantsIds();
-    this.clampPages();
   }
 
+  /** 🔹 Quitar participante */
   removeParticipant(u: User): void {
     if (!u?._id) return;
     this.selectedUsers = this.selectedUsers.filter(x => x._id !== u._id);
@@ -92,17 +106,18 @@ export class EventoComponent implements OnInit {
       this.availableUsers.sort((a, b) => a.username.localeCompare(b.username));
     }
     this.syncParticipantsIds();
-    this.clampPages();
   }
 
   private syncParticipantsIds(): void {
     this.newEvent.participantes = this.selectedUsers.map(u => u._id!).filter(Boolean);
   }
 
+  /** 🔹 Crear evento */
   onSubmit(): void {
     this.errorMessage = '';
+
     if (!this.newEvent.name?.trim()) {
-      this.errorMessage = 'El ti­tulo del evento es obligatorio.';
+      this.errorMessage = 'El título del evento es obligatorio.';
       return;
     }
     if (!this.newEvent.schedule?.length) {
@@ -118,16 +133,21 @@ export class EventoComponent implements OnInit {
       next: (created) => {
         const normalized: Evento = {
           ...created,
-          schedule: Array.isArray(created.schedule) ? created.schedule : (created.schedule ? [created.schedule as any] : []),
-          participantes: Array.isArray((created as any).participantes) ? (created as any).participantes : ((created as any).participants || [])
+          schedule: Array.isArray(created.schedule)
+            ? created.schedule
+            : [created.schedule],
+          participantes: Array.isArray(created.participantes)
+            ? created.participantes
+            : []
         };
         this.eventos.push(normalized);
         this.resetForm();
       },
-      error: () => this.errorMessage = 'Error al crear el evento. Revisa los datos.'
+      error: () => (this.errorMessage = 'Error al crear el evento.')
     });
   }
 
+  /** 🔹 Eliminar evento */
   openDeleteModal(index: number): void {
     this.pendingDeleteIndex = index;
     this.showDeleteModal = true;
@@ -161,9 +181,114 @@ export class EventoComponent implements OnInit {
     });
   }
 
+  /** 🔹 Iniciar edición */
+  startEdit(evt: Evento): void {
+    this.errorMessage = '';
+    this.editingEventId = evt._id ?? null;
+  
+    this.newEvent = {
+      _id: evt._id,
+      name: evt.name,
+      address: evt.address,
+      schedule: Array.isArray(evt.schedule) ? [...evt.schedule] : [evt.schedule],
+      participantes: Array.isArray(evt.participantes)
+        ? [...evt.participantes]
+        : []
+    };
+  
+    // 🔹 Abre automáticamente la sección de editar evento
+    this.openSection = 'edit';
+  
+    // Cargar los participantes seleccionados y disponibles
+    this.selectedUsers = this.users.filter(u =>
+      this.newEvent.participantes?.includes(u._id!)
+    );
+    this.availableUsers = this.users.filter(
+      u => !this.newEvent.participantes?.includes(u._id!)
+    );
+  
+    // Extraer fecha y hora del horario
+    if (this.newEvent.schedule.length > 0) {
+      const [datePart, timePart] = this.newEvent.schedule[0].split(' ');
+      this.dateStr = datePart;
+      this.timeStr = timePart;
+    }
+  }
+//////////////////////////////////////////EJERCICIO SEMINARI ANGULAR/////////////////////////////////
+  updateEvento(): void {
+    this.errorMessage = '';
+  
+    if (!this.editingEventId) {
+      this.errorMessage = 'No hay evento seleccionado para editar.';
+      return;
+    }
+  
+    if (!this.newEvent.name?.trim() || !this.newEvent.address?.trim() || !this.newEvent.schedule?.length) {
+      this.errorMessage = 'Faltan campos obligatorios.';
+      return;
+    }
+  
+    this.eventoService.updateEvento(this.editingEventId, this.newEvent).subscribe({
+      next: () => {
+        // ✅ Una vez actualizado, pedimos de nuevo el evento al backend
+        this.eventoService.getEventoById(this.editingEventId!).subscribe({
+          next: (freshEvent: Evento) => {
+            // Normalizamos el evento devuelto
+            const normalized: Evento = {
+              ...freshEvent,
+              schedule: Array.isArray(freshEvent.schedule)
+                ? freshEvent.schedule
+                : [freshEvent.schedule],
+              participantes: Array.isArray(freshEvent.participantes)
+                ? freshEvent.participantes
+                : []
+            };
+  
+            // Actualizamos el array local de eventos
+            const index = this.eventos.findIndex(e => e._id === this.editingEventId);
+            if (index !== -1) {
+              this.eventos[index] = normalized;
+            }
+  
+            // Recargamos usuarios para refrescar nombres
+            this.loadUsers();
+  
+            // Reseteamos el formulario
+            this.resetForm();
+            this.editingEventId = null;
+          },
+          error: () => {
+            this.errorMessage = 'Error al recargar el evento actualizado.';
+          }
+        });
+      },
+      error: () => {
+        this.errorMessage = 'Error al actualizar el evento.';
+      }
+    });
+  }
+    
+  /** 🔹 Cancelar edición */
+  cancelEdit(): void {
+    this.resetForm();
+    this.editingEventId = null;
+  }
+
+  /** 🔹 Resetear formulario */
+  private resetForm(): void {
+    this.newEvent = { name: '', schedule: [], address: '', participantes: [] };
+    this.availableUsers = [...this.users];
+    this.selectedUsers = [];
+    this.dateStr = '';
+    this.timeStr = '';
+    this.errorMessage = '';
+  }
+
+  /** 🔹 Utilidades de visualización */
   getScheduleText(e: Evento): string {
-    if (Array.isArray(e.schedule) && e.schedule.length) return this.formatSchedule(e.schedule[0]);
-    if (typeof (e as any).schedule === 'string') return this.formatSchedule((e as any).schedule);
+    if (Array.isArray(e.schedule) && e.schedule.length)
+      return this.formatSchedule(e.schedule[0]);
+    if (typeof e.schedule === 'string') return this.formatSchedule(e.schedule);
     return '-';
   }
 
@@ -172,93 +297,33 @@ export class EventoComponent implements OnInit {
     const sep = s.includes('T') ? 'T' : ' ';
     const [d, t = ''] = s.split(sep);
     const [y, m, d2] = d.split('-');
-    const hhmm = t.slice(0,5);
-    if (y && m && d2) return `${d2}-${m}-${y}${hhmm ? ' ' + hhmm : ''}`;
-    return s;
+    const hhmm = t.slice(0, 5);
+    return y && m && d2 ? `${d2}-${m}-${y} ${hhmm}` : s;
   }
 
-  getEventAddress(e: any): string {
-    return e?.address ?? e?.direccion ?? '-';
+  getEventAddress(e: Evento): string {
+    return e?.address ?? '-';
   }
 
-  getParticipantsList(e: any): string[] {
-    return e?.participantes ?? e?.participants ?? [];
-  }
-
-  getParticipantsNames(e: any): string {
-    const ids = this.getParticipantsList(e);
-    const names = ids.map(p => this.getUserNameById(p)).filter(Boolean);
+  getParticipantsNames(e: Evento): string {
+    const participants = e.participantes ?? [];
+    const names = participants.map(p => {
+      if (typeof p === 'string') {
+        return this.users.find(u => u._id === p)?.username;
+      } else if (typeof p === 'object' && 'username' in p) {
+        return (p as User).username;
+      }
+      return null;
+    }).filter(Boolean);
+  
     return names.length ? names.join(', ') : '-';
   }
+  openSection: 'create' | 'edit' | 'list' | null = 'list';
 
-  getUserNameById(idOrObj: any): string {
-    if (idOrObj && typeof idOrObj === 'object') {
-      if (idOrObj.username) return idOrObj.username;
-      if (idOrObj._id) {
-        const u = this.users.find(x => x._id === idOrObj._id);
-        return u ? u.username : idOrObj._id;
-      }
-    }
-    const u = this.users.find(x => x._id === idOrObj);
-    return u ? u.username : (idOrObj || '');
+  toggleSection(section: 'create' | 'edit' | 'list'): void {
+    this.openSection = this.openSection === section ? null : section;
   }
 
-  get availableTotalPages(): number {
-    return Math.max(1, Math.ceil(this.availableUsers.length / this.availablePageSize));
-  }
-  get selectedTotalPages(): number {
-    return Math.max(1, Math.ceil(this.selectedUsers.length / this.selectedPageSize));
-  }
 
-  get availablePageItems(): User[] {
-    const start = (this.availablePage - 1) * this.availablePageSize;
-    return this.availableUsers.slice(start, start + this.availablePageSize);
-  }
-  get selectedPageItems(): User[] {
-    const start = (this.selectedPage - 1) * this.selectedPageSize;
-    return this.selectedUsers.slice(start, start + this.selectedPageSize);
-  }
-
-  availablePrevPage(): void {
-    if (this.availablePage > 1) this.availablePage--;
-  }
-  availableNextPage(): void {
-    if (this.availablePage < this.availableTotalPages) this.availablePage++;
-  }
-  setAvailablePageSize(v: string): void {
-    const n = parseInt(v, 10) || 5;
-    this.availablePageSize = n;
-    this.availablePage = 1;
-    this.clampPages();
-  }
-
-  selectedPrevPage(): void {
-    if (this.selectedPage > 1) this.selectedPage--;
-  }
-  selectedNextPage(): void {
-    if (this.selectedPage < this.selectedTotalPages) this.selectedPage++;
-  }
-  setSelectedPageSize(v: string): void {
-    const n = parseInt(v, 10) || 5;
-    this.selectedPageSize = n;
-    this.selectedPage = 1;
-    this.clampPages();
-  }
-
-  private clampPages(): void {
-    this.availablePage = Math.min(Math.max(1, this.availablePage), this.availableTotalPages);
-    this.selectedPage = Math.min(Math.max(1, this.selectedPage), this.selectedTotalPages);
-  }
-
-  private resetForm(): void {
-    this.newEvent = { name: '', schedule: [], address: '', participantes: [] };
-    this.availableUsers = [...this.users];
-    this.selectedUsers = [];
-    this.dateStr = '';
-    this.timeStr = '';
-    this.errorMessage = '';
-    this.availablePage = 1;
-    this.selectedPage = 1;
-    this.clampPages();
-  }
+  
 }

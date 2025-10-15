@@ -28,4 +28,13 @@ export class EventoService {
   deleteEvento(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+  // uppdate evento
+  updateEvento(id: string, updatedEvent: Evento): Observable<Evento> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    const scheduleAsString =
+      Array.isArray(updatedEvent.schedule) ? (updatedEvent.schedule[0] || '') : (updatedEvent.schedule as any);
+    const payload: any = { ...updatedEvent, schedule: scheduleAsString, participantes: [...(updatedEvent.participantes || [])] };
+    return this.http.put<Evento>(`${this.apiUrl}/${id}`, payload, { headers });
+  }
+  
 }
