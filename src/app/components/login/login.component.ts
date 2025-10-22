@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -16,8 +16,6 @@ export class LoginComponent  {
   loginForm: FormGroup;
   isLoading = false;
   errorMessage = '';
-  private starInterval: any;
-  private cometInterval: any;
 
   constructor(
     private fb: FormBuilder,
@@ -54,22 +52,9 @@ export class LoginComponent  {
     }
   }
 
-  createAdmin(): void {
-    this.authService.createAdminUser().subscribe({
-      next: (response) => {
-        console.log('Admin creado:', response);
-        alert('Usuario admin creado exitosamente. Ahora puedes iniciar sesión con usuario: "admin" y contraseña: "admin"');
-        
-        this.loginForm.patchValue({
-          username: 'admin',
-          password: 'admin'
-        });
-      },
-      error: (error) => {
-        console.error('Error creando admin:', error);
-        this.errorMessage = 'Error creando usuario admin';
-      }
-    });
+  // 🔹 Nuevo método para redirigir a la página de registro
+  goToRegistro(): void {
+    this.router.navigate(['/registro']);
   }
 
   private markFormGroupTouched(): void {

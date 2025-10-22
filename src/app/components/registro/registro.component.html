@@ -1,0 +1,89 @@
+<div class="registro-container">
+  <div class="registro-card">
+    <div class="registro-header">
+      <h1 class="registro-title">Crea tu cuenta</h1>
+      <p class="registro-subtitle">Completa los campos para registrarte</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <!-- Username -->
+      <div class="form-group">
+        <label class="form-label">Nombre de usuario</label>
+        <input
+          type="text"
+          class="form-input"
+          formControlName="username"
+          placeholder="Ej: bryan123"
+        />
+        <div
+          *ngIf="registerForm.get('username')?.touched && registerForm.get('username')?.invalid"
+          class="error-message"
+        >
+          <span>⚠</span> Mínimo 3 caracteres.
+        </div>
+      </div>
+
+      <!-- Gmail -->
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input
+          type="email"
+          class="form-input"
+          formControlName="gmail"
+          placeholder="ejemplo@gmail.com"
+        />
+        <div
+          *ngIf="registerForm.get('gmail')?.touched && registerForm.get('gmail')?.invalid"
+          class="error-message"
+        >
+          <span>⚠</span> Ingresa un correo electrónico válido.
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input
+          type="password"
+          class="form-input"
+          formControlName="password"
+          placeholder="Mínimo 4 caracteres"
+        />
+        <div
+          *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+          class="error-message"
+        >
+          <span>⚠</span> La contraseña debe tener al menos 4 caracteres.
+        </div>
+      </div>
+
+      <!-- Birthday -->
+      <div class="form-group">
+        <label class="form-label">Fecha de nacimiento</label>
+        <input type="date" class="form-input" formControlName="birthday" />
+        <div
+          *ngIf="registerForm.get('birthday')?.touched && registerForm.get('birthday')?.invalid"
+          class="error-message"
+        >
+          <span>⚠</span> Ingresa una fecha válida.
+        </div>
+      </div>
+
+      <!-- Mensajes -->
+      <div *ngIf="successMessage" class="success-message">{{ successMessage }}</div>
+      <div *ngIf="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+      <!-- Botón principal -->
+      <button type="submit" class="registro-button" [disabled]="isLoading || registerForm.invalid">
+        <span *ngIf="isLoading" class="loading-spinner"></span>
+        {{ isLoading ? 'Creando cuenta...' : 'Registrarse' }}
+      </button>
+    </form>
+
+    <!-- Sección inferior -->
+    <div class="login-section">
+      <p>¿Ya tienes una cuenta?</p>
+      <button type="button" class="login-link" (click)="goToLogin()">Inicia sesión aquí</button>
+    </div>
+  </div>
+</div>

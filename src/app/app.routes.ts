@@ -7,35 +7,44 @@ import { authGuard } from './guards/auth.guard';
 import { LoginComponent } from './components/login/login.component';
 
 export const routes: Routes = [
+  // 🔹 Página principal redirige a login
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+
+  // 🔹 Login (pública)
   { path: 'login', component: LoginComponent },
-  { 
-    path: '', 
-    redirectTo: 'login', 
-    pathMatch: 'full' 
+
+  // 🔹 Registro (pública)
+  {
+    path: 'registro',
+    loadComponent: () =>
+      import('./components/registro/registro.component').then(
+        (m) => m.RegistroComponent
+      ),
   },
-  { 
-    path: 'home', 
+
+  // 🔹 Rutas protegidas (solo con sesión iniciada)
+  {
+    path: 'home',
     component: HomeComponent,
-    canActivate: [authGuard] 
+    canActivate: [authGuard],
   },
-  { 
-    path: 'usuaris', 
+  {
+    path: 'usuaris',
     component: UsuarisComponent,
-    canActivate: [authGuard] 
+    canActivate: [authGuard],
   },
-  { 
-    path: 'evento', 
+  {
+    path: 'evento',
     component: EventoComponent,
-    canActivate: [authGuard] 
+    canActivate: [authGuard],
   },
-  { 
-    path: '**', 
-    redirectTo: 'login' 
-  }
+
+  // 🔹 Cualquier otra ruta redirige a login
+  { path: '**', redirectTo: 'login' },
 ];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes, { useHash: true })],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}
